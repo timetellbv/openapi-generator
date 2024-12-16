@@ -1481,8 +1481,6 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen {
             LOGGER.error("OpenAPI Type for {} is null. Default to UNKNOWN_OPENAPI_TYPE instead.", p.getName());
             openAPIType = "UNKNOWN_OPENAPI_TYPE";
         }
-        
-        LOGGER.warn("OpenAPI Type for {} is {}.", p.getName(), openAPIType);
 
         if (typeMapping.containsKey(openAPIType)) {
             type = typeMapping.get(openAPIType);
@@ -2018,6 +2016,7 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen {
         typeMapping.put("UUID", "Guid");
         typeMapping.put("URI", "string");
         typeMapping.put("AnyType", "Object");
+        typeMapping.put("TTXEncryptedInteger", "TTXEncryptedInteger");
 
         if (this.useCollection) {
             typeMapping.put("array", "Collection");
