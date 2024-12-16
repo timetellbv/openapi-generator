@@ -2016,6 +2016,7 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen {
         typeMapping.put("UUID", "Guid");
         typeMapping.put("URI", "string");
         typeMapping.put("AnyType", "Object");
+        typeMapping.put("TTXEncryptedInteger", "TTXEncryptedInteger");
 
         if (this.useCollection) {
             typeMapping.put("array", "Collection");
