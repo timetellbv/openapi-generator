@@ -1986,7 +1986,7 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen {
     }
 
     protected Set<String> getValueTypes() {
-        return new HashSet<>(Arrays.asList("decimal", "bool", "int", "uint", "long", "ulong", "float", "double", "DateTime", "DateOnly", "DateTimeOffset", "Guid"));
+        return new HashSet<>(Arrays.asList("decimal", "bool", "int", "uint", "long", "ulong", "float", "double", "DateTime", "DateOnly", "DateTimeOffset", "TTXEncryptedInteger", "Guid"));
     }
 
     protected void setTypeMapping() {
