@@ -193,6 +193,8 @@ public abstract class AbstractCSharpCodegen extends DefaultCodegen {
                         "DateTime",
                         "DateTimeOffset?",
                         "DateTimeOffset",
+                        "TTXEncryptedInteger",
+                        "TTXEncryptedInteger?",
                         "DateOnly?",
                         "DateOnly",
                         "Boolean",
