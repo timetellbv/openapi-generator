@@ -13,6 +13,9 @@ import java.util.function.Consumer;
 {{#openApiNullable}}
 import org.openapitools.jackson.nullable.JsonNullableModule;
 {{/openApiNullable}}
+{{#generateClientAsBean}}
+import org.springframework.beans.factory.annotation.Autowired;
+{{/generateClientAsBean}}
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -23,6 +26,9 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 {{#withXml}}
   import org.springframework.http.converter.xml.MappingJackson2XmlHttpMessageConverter;
 {{/withXml}}
+{{#generateClientAsBean}}
+import org.springframework.stereotype.Component;
+{{/generateClientAsBean}}
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -44,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TimeZone;
+import java.util.function.Supplier;
 
 import {{javaxPackage}}.annotation.Nullable;
 
@@ -60,36 +67,42 @@ import {{invokerPackage}}.auth.OAuth;
 {{/hasOAuthMethods}}
 
 {{>generatedAnnotation}}
+{{#generateClientAsBean}}
+@Component("{{invokerPackage}}.ApiClient")
+{{/generateClientAsBean}}
 public class ApiClient{{#jsr310}} extends JavaTimeFormatter{{/jsr310}} {
     public enum CollectionFormat {
         CSV(","), TSV("\t"), SSV(" "), PIPES("|"), MULTI(null);
 
-        private final String separator;
+        protected final String separator;
         CollectionFormat(String separator) {
             this.separator = separator;
         }
 
-        private String collectionToString(Collection<?> collection) {
+        protected String collectionToString(Collection<?> collection) {
             return StringUtils.collectionToDelimitedString(collection, separator);
         }
     }
 
-    private final HttpHeaders defaultHeaders = new HttpHeaders();
-    private final MultiValueMap<String, String> defaultCookies = new LinkedMultiValueMap<>();
+    protected final HttpHeaders defaultHeaders = new HttpHeaders();
+    protected final MultiValueMap<String, String> defaultCookies = new LinkedMultiValueMap<>();
 
-    private String basePath = "{{basePath}}";
+    protected String basePath = "{{basePath}}";
 
-    private final RestClient restClient;
-    private final DateFormat dateFormat;
-    private final ObjectMapper objectMapper;
+    protected final RestClient restClient;
+    protected final DateFormat dateFormat;
+    protected final ObjectMapper objectMapper;
 
-    private Map<String, Authentication> authentications;
+    protected Map<String, Authentication> authentications;
 
 
     public ApiClient() {
         this(null);
     }
 
+    {{#generateClientAsBean}}
+    @Autowired
+    {{/generateClientAsBean}}
     public ApiClient(RestClient restClient) {
         this(restClient, createDefaultDateFormat());
     }
@@ -105,7 +118,7 @@ public class ApiClient{{#jsr310}} extends JavaTimeFormatter{{/jsr310}} {
         this.init();
     }
 
-    private ApiClient(RestClient restClient, DateFormat format) {
+    protected ApiClient(RestClient restClient, DateFormat format) {
         this(restClient, createDefaultObjectMapper(format), format);
     }
 
@@ -235,6 +248,21 @@ public class ApiClient{{#jsr310}} extends JavaTimeFormatter{{/jsr310}} {
             if (auth instanceof HttpBearerAuth) {
                 ((HttpBearerAuth) auth).setBearerToken(bearerToken);
                 return;
+            }
+        }
+        throw new RuntimeException("No Bearer authentication configured!");
+    }
+
+    /**
+    * Helper method to set the supplier of access tokens for Bearer authentication.
+    *
+    * @param tokenSupplier the token supplier function
+    */
+    public void setBearerToken(Supplier<String> tokenSupplier) {
+        for (Authentication auth : authentications.values()) {
+            if (auth instanceof HttpBearerAuth) {
+                ((HttpBearerAuth) auth).setBearerToken(tokenSupplier);
+            return;
             }
         }
         throw new RuntimeException("No Bearer authentication configured!");
@@ -598,7 +626,7 @@ public class ApiClient{{#jsr310}} extends JavaTimeFormatter{{/jsr310}} {
      * @param uriParams The path parameters
      * return templatized query string
      */
-    private String generateQueryUri(MultiValueMap<String, String> queryParams, Map<String, Object> uriParams) {
+    protected String generateQueryUri(MultiValueMap<String, String> queryParams, Map<String, Object> uriParams) {
         StringBuilder queryBuilder = new StringBuilder();
         queryParams.forEach((name, values) -> {
             if (CollectionUtils.isEmpty(values)) {
@@ -624,13 +652,13 @@ public class ApiClient{{#jsr310}} extends JavaTimeFormatter{{/jsr310}} {
         return queryBuilder.toString();
     }
 
-    private RestClient.RequestBodySpec prepareRequest(String path, HttpMethod method, Map<String, Object> pathParams,
+    protected RestClient.RequestBodySpec prepareRequest(String path, HttpMethod method, Map<String, Object> pathParams,
         MultiValueMap<String, String> queryParams, Object body, HttpHeaders headerParams,
         MultiValueMap<String, String> cookieParams, MultiValueMap<String, Object> formParams, List<MediaType> accept,
         MediaType contentType, String[] authNames) {
         updateParamsForAuth(authNames, queryParams, headerParams, cookieParams);
 
-        final UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(basePath).path(path);
+        final UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(basePath).path(path);
 
         String finalUri = builder.build(false).toUriString();
         Map<String, Object> uriParams = new HashMap<>();
@@ -656,6 +684,18 @@ public class ApiClient{{#jsr310}} extends JavaTimeFormatter{{/jsr310}} {
         addHeadersToRequest(defaultHeaders, requestBuilder);
         addCookiesToRequest(cookieParams, requestBuilder);
         addCookiesToRequest(defaultCookies, requestBuilder);
+
+        if (MediaType.MULTIPART_FORM_DATA.isCompatibleWith(contentType)) {
+            formParams.forEach(
+                    (k, v) -> {
+                        if (v instanceof java.util.ArrayList) {
+                            Object o = v.get(0);
+                            if (o != null && o.getClass().getEnumConstants() != null) {
+                                v.set(0, o.toString());
+                            }
+                        }
+                    });
+        }
 
         var selectedBody = selectBody(body, formParams, contentType);
         if (selectedBody != null) {
@@ -700,7 +740,7 @@ public class ApiClient{{#jsr310}} extends JavaTimeFormatter{{/jsr310}} {
      * @param cookies map all cookies
      * @return header string for cookies.
      */
-    private String buildCookieHeader(MultiValueMap<String, String> cookies) {
+    protected String buildCookieHeader(MultiValueMap<String, String> cookies) {
         final StringBuilder cookieValue = new StringBuilder();
         String delimiter = "";
         for (final Map.Entry<String, List<String>> entry : cookies.entrySet()) {

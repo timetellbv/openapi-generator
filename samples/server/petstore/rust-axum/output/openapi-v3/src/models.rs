@@ -13,8 +13,8 @@ pub struct AnyOfGetQueryParams {
     /// list of any of objects
     #[serde(rename = "any-of")]
     #[validate(length(min = 1))]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub any_of: Option<Vec<models::AnyOfObject>>,
+    #[serde(default)]
+    pub any_of: Vec<models::AnyOfObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
@@ -28,8 +28,8 @@ pub struct CallbackWithHeaderPostQueryParams {
 #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
 pub struct ComplexQueryParamGetQueryParams {
     #[serde(rename = "list-of-strings")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub list_of_strings: Option<Vec<models::StringObject>>,
+    #[serde(default)]
+    pub list_of_strings: Vec<models::StringObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
@@ -50,8 +50,8 @@ pub struct GetWithBooleanParameterQueryParams {
 #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
 pub struct JsonComplexQueryParamGetQueryParams {
     #[serde(rename = "list-of-strings")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub list_of_strings: Option<Vec<models::StringObject>>,
+    #[serde(default)]
+    pub list_of_strings: Vec<models::StringObject>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
@@ -80,8 +80,8 @@ pub struct ParamgetGetQueryParams {
     pub some_object: Option<crate::types::Object>,
     /// Some list to pass as query parameter
     #[serde(rename = "someList")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub some_list: Option<Vec<models::MyId>>,
+    #[serde(default)]
+    pub some_list: Vec<models::MyId>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, validator::Validate)]
@@ -2764,15 +2764,31 @@ impl std::ops::DerefMut for Ok {
     }
 }
 
-/// One of:
-/// - Vec<String>
-/// - i32
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct OneOfGet200Response(Box<serde_json::value::RawValue>);
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(untagged)]
+#[allow(non_camel_case_types)]
+pub enum OneOfGet200Response {
+    I32(Box<i32>),
+    VecOfString(Box<Vec<String>>),
+}
 
 impl validator::Validate for OneOfGet200Response {
     fn validate(&self) -> std::result::Result<(), validator::ValidationErrors> {
-        std::result::Result::Ok(())
+        match self {
+            Self::I32(_) => std::result::Result::Ok(()),
+            Self::VecOfString(_) => std::result::Result::Ok(()),
+        }
+    }
+}
+
+impl From<i32> for OneOfGet200Response {
+    fn from(value: i32) -> Self {
+        Self::I32(Box::new(value))
+    }
+}
+impl From<Vec<String>> for OneOfGet200Response {
+    fn from(value: Vec<String>) -> Self {
+        Self::VecOfString(Box::new(value))
     }
 }
 
@@ -2784,12 +2800,6 @@ impl std::str::FromStr for OneOfGet200Response {
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         serde_json::from_str(s)
-    }
-}
-
-impl PartialEq for OneOfGet200Response {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.get() == other.0.get()
     }
 }
 

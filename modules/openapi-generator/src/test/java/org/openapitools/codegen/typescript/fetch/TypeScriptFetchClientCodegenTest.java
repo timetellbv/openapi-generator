@@ -24,6 +24,7 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Test(groups = {TypeScriptGroups.TYPESCRIPT, TypeScriptGroups.TYPESCRIPT_FETCH})
@@ -133,6 +134,7 @@ public class TypeScriptFetchClientCodegenTest {
         Assert.assertEquals(codegen.toEnumVarName("valid_var", "string"), "ValidVar");
         Assert.assertEquals(codegen.toEnumVarName("-valid_var+", "string"), "ValidVar");
         Assert.assertEquals(codegen.toEnumVarName("30valid_+var", "string"), "_30validVar");
+        Assert.assertEquals(codegen.toEnumVarName("VALID:var", "string"), "ValidVar");
 
         codegen = new TypeScriptFetchClientCodegen();
         codegen.additionalProperties().put(CodegenConstants.ENUM_PROPERTY_NAMING, "original");
@@ -142,6 +144,7 @@ public class TypeScriptFetchClientCodegenTest {
         Assert.assertEquals(codegen.toEnumVarName("valid_var", "string"), "valid_var");
         Assert.assertEquals(codegen.toEnumVarName("-valid_var+", "string"), "valid_var");
         Assert.assertEquals(codegen.toEnumVarName("30valid_+var", "string"), "_30valid_var");
+        Assert.assertEquals(codegen.toEnumVarName("VALID:var", "string"), "VALID_var");
 
         codegen = new TypeScriptFetchClientCodegen();
         codegen.additionalProperties().put(CodegenConstants.ENUM_PROPERTY_NAMING, "UPPERCASE");
@@ -153,7 +156,7 @@ public class TypeScriptFetchClientCodegenTest {
         Assert.assertEquals(codegen.toEnumVarName("-valid_+var", "string"), "MINUS_VALID_PLUS_VAR");
         Assert.assertEquals(codegen.toEnumVarName("-valid_var+", "string"), "MINUS_VALID_VAR_PLUS");
         Assert.assertEquals(codegen.toEnumVarName("30valid_+var", "string"), "_30VALID_PLUS_VAR");
-
+        Assert.assertEquals(codegen.toEnumVarName("VALID:var", "string"), "VALID_VAR");
     }
 
     @Test
@@ -168,7 +171,7 @@ public class TypeScriptFetchClientCodegenTest {
 
         // Cf. issue #4968: Array of Alias of Array
         Schema<?> parentSchema = new ArraySchema().items(
-            new Schema().$ref("#/components/schemas/Child")
+                new Schema().$ref("#/components/schemas/Child")
         );
 
         ModelUtils.setGenerateAliasAsModel(false);
@@ -342,6 +345,31 @@ public class TypeScriptFetchClientCodegenTest {
         TestUtils.assertFileContains(pet, "} from './somePrefixPetCategory';");
         TestUtils.assertFileExists(Paths.get(output + "/models/somePrefixPetCategory.ts"));
         TestUtils.assertFileExists(Paths.get(output + "/apis/petControllerApi.ts"));
+    }
+
+    @Test(description = "Issue #20195")
+    public void givenObjectHasAdditionalPropertiesWhenGenerateThenIndexSignatureNotUsedToGenerateMethodName() throws IOException {
+        File output = Files.createTempDirectory("test").toFile().getCanonicalFile();
+        output.deleteOnExit();
+
+        TypeScriptFetchClientCodegen clientCodegen = new TypeScriptFetchClientCodegen();
+        clientCodegen.setWithoutRuntimeChecks(false);
+        clientCodegen.setOutputDir(output.getAbsolutePath());
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put(TypeScriptFetchClientCodegen.WITH_INTERFACES, true);
+        properties.put(CodegenConstants.ENUM_PROPERTY_NAMING, "original");
+        clientCodegen.additionalProperties().putAll(properties);
+
+        DefaultGenerator defaultGenerator = new DefaultGenerator();
+        defaultGenerator.opts(
+                new ClientOptInput().openAPI(TestUtils.parseSpec("src/test/resources/bugs/issue_20195.json"))
+                        .config(clientCodegen)
+        ).generate();
+
+        String outputPath = output.getAbsolutePath();
+        Path exampleApiPath = Paths.get(outputPath + "/apis/ExampleApi.ts");
+        TestUtils.assertFileContains(exampleApiPath, "new Blob([JSON.stringify(ResponseOfStringToJSON");
     }
 
     private static File generate(Map<String, Object> properties) throws IOException {
