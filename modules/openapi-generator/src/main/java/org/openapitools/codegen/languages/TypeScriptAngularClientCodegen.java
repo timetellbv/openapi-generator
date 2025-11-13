@@ -84,7 +84,7 @@ public class TypeScriptAngularClientCodegen extends AbstractTypeScriptClientCode
     public static final String NGPACKAGR_VERSION = "ngPackagrVersion";
     public static final String ZONEJS_VERSION = "zonejsVersion";
 
-    protected String ngVersion = "19.0.0";
+    protected String ngVersion = "20.0.0";
     @Getter @Setter
     protected String npmRepository = null;
     @Setter(AccessLevel.PRIVATE) private boolean useSingleRequestParameter = false;
@@ -170,7 +170,7 @@ public class TypeScriptAngularClientCodegen extends AbstractTypeScriptClientCode
 
     @Override
     public String getHelp() {
-        return "Generates a TypeScript Angular (9.x - 19.x) client library.";
+        return "Generates a TypeScript Angular (9.x - 20.x) client library.";
     }
 
     @Override
@@ -460,6 +460,9 @@ public class TypeScriptAngularClientCodegen extends AbstractTypeScriptClientCode
                         break;
                 }
             }
+
+            // backup path in extensions
+            op.vendorExtensions.put("x-path-from-spec", op.path);
 
             // Overwrite path to TypeScript template string, after applying everything we just did.
             op.path = pathBuffer.toString();

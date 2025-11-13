@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.samskivert.mustache.Mustache;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -50,6 +51,7 @@ import org.openapitools.codegen.model.ModelMap;
 import org.openapitools.codegen.model.ModelsMap;
 import org.openapitools.codegen.model.OperationMap;
 import org.openapitools.codegen.model.OperationsMap;
+import org.openapitools.codegen.templating.mustache.ReplaceAllLambda;
 import org.openapitools.codegen.utils.CamelizeOption;
 import org.openapitools.codegen.utils.ModelUtils;
 import org.slf4j.Logger;
@@ -1289,6 +1291,9 @@ public abstract class AbstractJavaCodegen extends DefaultCodegen implements Code
                                     }
                                 })
                                 .collect(Collectors.joining(", "));
+                    } else if (cp.items.isContainer) {
+                        // TODO nested array/set/map is not supported at the moment so defaulting to null
+                        defaultValue = null;
                     } else { // array item is non-string, e.g. integer
                         defaultValue = StringUtils.join(_values, ", ");
                     }
@@ -1886,6 +1891,7 @@ public abstract class AbstractJavaCodegen extends DefaultCodegen implements Code
             model.imports.add("Arrays");
         } else if ("set".equals(property.containerType)) {
             model.imports.add("LinkedHashSet");
+            model.imports.add("Arrays");
             if ((!openApiNullable || !property.isNullable) && jackson) { // cannot be wrapped to nullable
                 model.imports.add("JsonDeserialize");
                 property.vendorExtensions.put("x-setter-extra-annotation", "@JsonDeserialize(as = LinkedHashSet.class)");
