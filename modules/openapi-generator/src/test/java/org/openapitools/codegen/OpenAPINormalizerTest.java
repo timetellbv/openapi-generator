@@ -910,7 +910,10 @@ public class OpenAPINormalizerTest {
 
         Schema schema2 = openAPI.getComponents().getSchemas().get("Item");
         assertEquals(((Schema) schema2.getProperties().get("my_enum")).getAnyOf(), null);
-        assertEquals(((Schema) schema2.getProperties().get("my_enum")).get$ref(), "#/components/schemas/MyEnum");
+        assertEquals(((Schema) schema2.getProperties().get("my_enum")).getAllOf().size(), 1);
+        assertEquals(((Schema) schema2.getProperties().get("my_enum")).getNullable(), true);
+        assertEquals(((Schema) schema2.getProperties().get("my_enum")).get$ref(), null);
+        assertEquals(((Schema) ((Schema) schema2.getProperties().get("my_enum")).getAllOf().get(0)).get$ref(), "#/components/schemas/MyEnum");
     }
 
     @Test
@@ -952,6 +955,10 @@ public class OpenAPINormalizerTest {
         assertNotEquals(((Schema) schema11.getOneOf().get(0)).getPrefixItems(), null);
         assertEquals(((Schema) schema11.getOneOf().get(1)).getItems(), null);
 
+        Schema schema13 = openAPI.getComponents().getSchemas().get("OneOfArrayWithTitle");
+        assertEquals(((Schema) schema13.getOneOf().get(0)).getTitle(), "dog_array");
+        assertEquals(((Schema) schema13.getOneOf().get(1)).getTitle(), "cat_object");
+
         Map<String, String> inputRules = Map.of("NORMALIZE_31SPEC", "true");
         OpenAPINormalizer openAPINormalizer = new OpenAPINormalizer(openAPI, inputRules);
         openAPINormalizer.normalize();
@@ -989,6 +996,12 @@ public class OpenAPINormalizerTest {
         assertNotEquals(((Schema) schema12.getOneOf().get(0)).getItems(), null);
         assertEquals(((Schema) schema12.getOneOf().get(0)).getPrefixItems(), null);
         assertNotEquals(((Schema) schema12.getOneOf().get(1)).getItems(), null);
+
+        Schema schema14 = openAPI.getComponents().getSchemas().get("OneOfArrayWithTitle");
+        assertEquals(((Schema) schema14.getOneOf().get(0)).getTitle(), "dog_array");
+        assertEquals(((Schema) schema14.getOneOf().get(1)).getTitle(), "cat_object");
+        assertTrue(ModelUtils.isArraySchema((Schema) schema14.getOneOf().get(0)));
+        assertEquals(((Schema) schema14.getOneOf().get(0)).getType(), "array");
     }
 
     @Test
@@ -1104,7 +1117,10 @@ public class OpenAPINormalizerTest {
         Schema schema18 = openAPI.getComponents().getSchemas().get("OneOfNullAndRef3");
         // original oneOf removed and simplified to just $ref (oneOf sub-schema) instead
         assertEquals(schema18.getOneOf(), null);
-        assertEquals(schema18.get$ref(), "#/components/schemas/Parent");
+        assertEquals(schema18.get$ref(), null);
+        assertEquals(schema18.getNullable(), true);
+        assertEquals(((Schema) schema18.getAllOf().get(0)).get$ref(), "#/components/schemas/Parent");
+
 
         Schema schema20 = openAPI.getComponents().getSchemas().get("ParentWithOneOfProperty");
         assertEquals(((Schema) schema20.getProperties().get("number")).get$ref(), "#/components/schemas/Number");
@@ -1182,6 +1198,24 @@ public class OpenAPINormalizerTest {
         assertEquals(((Schema) schema2.getProperties().get("property1")).getAllOf(), null);
         assertEquals(((Schema) schema2.getProperties().get("property2")).getAllOf(), null);
         assertEquals(((Schema) schema2.getProperties().get("property2")).getAllOf(), null);
+    }
+
+    @Test
+    public void testOpenAPINormalizerNormalizeReferenceSchema() {
+        // to test array schema processing in 3.1 spec
+        OpenAPI openAPI = TestUtils.parseSpec("src/test/resources/3_1/unsupported_schema_test.yaml");
+
+        Schema schema = openAPI.getComponents().getSchemas().get("Dummy");
+        assertEquals(((Schema) schema.getProperties().get("property3")).get$ref(), "#/components/schemas/RefSchema");
+
+        Map<String, String> inputRules = Map.of("NORMALIZE_31SPEC", "true");
+        OpenAPINormalizer openAPINormalizer = new OpenAPINormalizer(openAPI, inputRules);
+        openAPINormalizer.normalize();
+
+        Schema schema2 = openAPI.getComponents().getSchemas().get("Dummy");
+        assertEquals(((Schema) schema2.getProperties().get("property3")).getAllOf().size(), 1);
+        assertEquals(((Schema) schema2.getProperties().get("property3")).getDescription(), "Override description in $ref schema");
+        assertEquals(((Schema) ((Schema) schema2.getProperties().get("property3")).getAllOf().get(0)).get$ref(), "#/components/schemas/RefSchema");
     }
 
     @Test
